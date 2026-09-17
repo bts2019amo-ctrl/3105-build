@@ -1,12 +1,8 @@
 import Foundation
 
 enum AppSection: Int, CaseIterable, Identifiable {
-    case home
-    case new
-    case sources
     case installed
     case files
-    case search
 
     var id: Int { rawValue }
 }
@@ -89,7 +85,7 @@ struct AppTabNavigationState: Equatable {
     mutating func reconcileSelection(with visibility: FeatureVisibility) {
         guard let selectedSection = AppSection(rawValue: selectedTab),
               visibility.isVisible(selectedSection) else {
-            selectedTab = AppSection.home.rawValue
+            selectedTab = AppSection.installed.rawValue
             return
         }
     }

@@ -17,20 +17,14 @@ struct ContentView: View {
 #if targetEnvironment(simulator)
         let arguments = ProcessInfo.processInfo.arguments
         let initialTab: Int
-        if arguments.contains("--simulate-new-tab") {
-            initialTab = 1
-        } else if arguments.contains("--simulate-sources-tab") {
-            initialTab = 2
-        } else if arguments.contains("--simulate-installed-tab")
+        if arguments.contains("--simulate-installed-tab")
                     || arguments.contains("--simulate-patch-tab")
                     || arguments.contains("--simulate-wallpaper-tab") {
-            initialTab = 3
+            initialTab = AppSection.installed.rawValue
         } else if arguments.contains("--simulate-files-tab") {
-            initialTab = 4
-        } else if arguments.contains("--simulate-search-tab") {
-            initialTab = 5
+            initialTab = AppSection.files.rawValue
         } else {
-            initialTab = 0
+            initialTab = AppSection.installed.rawValue
         }
         _tabNavigation = State(initialValue: AppTabNavigationState(selectedTab: initialTab))
         _showSettings = State(
@@ -121,21 +115,6 @@ struct ContentView: View {
     @ViewBuilder
     private func sectionContent(_ section: AppSection) -> some View {
         switch section {
-        case .home:
-            RepositoryHomeView(
-                onOpenSettings: openSettings,
-                onOpenLogs: openLogs
-            )
-        case .new:
-            RepositoryNewView(
-                onOpenSettings: openSettings,
-                onOpenLogs: openLogs
-            )
-        case .sources:
-            RepositorySourcesView(
-                onOpenSettings: openSettings,
-                onOpenLogs: openLogs
-            )
         case .installed:
             PatchProjectsView(
                 onOpenSettings: openSettings,
@@ -144,11 +123,6 @@ struct ContentView: View {
         case .files:
             AppDataBrowserView(
                 tabSession: filesTabSession,
-                onOpenSettings: openSettings,
-                onOpenLogs: openLogs
-            )
-        case .search:
-            RepositorySearchView(
                 onOpenSettings: openSettings,
                 onOpenLogs: openLogs
             )
@@ -187,7 +161,7 @@ struct ContentView: View {
         let selected = AppSection(rawValue: tabNavigation.selectedTab)
         return selected.flatMap {
             featureVisibility.isVisible($0) ? $0 : nil
-        } ?? .home
+        } ?? .installed
     }
 
     private func openSettings() {
@@ -221,23 +195,15 @@ private struct CompactTabLabel: View {
 private extension AppSection {
     var titleKey: String {
         switch self {
-        case .home: return "tab.home"
-        case .new: return "tab.new"
-        case .sources: return "tab.sources"
         case .installed: return "tab.installed"
         case .files: return "tab.files"
-        case .search: return "tab.search"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .home: return "house.fill"
-        case .new: return "clock.fill"
-        case .sources: return "shippingbox.fill"
         case .installed: return "tray.full.fill"
         case .files: return "folder.fill"
-        case .search: return "magnifyingglass"
         }
     }
 }
