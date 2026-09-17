@@ -25,6 +25,8 @@ struct PatchProjectsView: View {
     @State private var wallpaperImportFeedback: WallpaperImportFeedback?
     @State private var wallpaperPendingDeletion: WallpaperStagedPackage?
     @State private var isImportingWallpapers = false
+    @State private var pendingRemoteFilename: String?
+    @State private var remoteDestinationID: UUID?
     @State private var showSimulatedWallpaperDetail = false
     @State private var simulatedWallpaperDetailGate = OneShotPresentationGate()
     let onOpenSettings: () -> Void
@@ -239,6 +241,17 @@ struct PatchProjectsView: View {
                 }
 #endif
             }
+            .onReceive(NotificationCenter.default.publisher(for: RemoteControlService.patchesDidChange)) { _ in
+                store.reload()
+                guard let filename = pendingRemoteFilename else { return }
+                if let item = store.items.first(where: { $0.packageURL.lastPathComponent == filename }) {
+                    pendingRemoteFilename = nil
+                    remoteDestinationID = item.id
+                }
+            }
+            .navigationDestination(item: $remoteDestinationID) { projectID in
+                PatchProjectDetailView(store: store, projectID: projectID)
+            }
             .navigationDestination(isPresented: $showSimulatedWallpaperDetail) {
                 if let package = wallpaperPackages.first {
                     InstalledWallpaperPackageDetailView(
@@ -261,6 +274,7 @@ struct PatchProjectsView: View {
 
     private func remotePatchRow(_ patch: RemotePatchInfo) -> some View {
         Button {
+            pendingRemoteFilename = patch.filename
             remoteControl.setPatchActive(patch, active: true)
         } label: {
             HStack {
@@ -558,9 +572,6 @@ struct PatchUnlockView: View {
                     } else {
                         Text(language.text("patch.password_once_message"))
                     }
-                }
-                .onReceive(NotificationCenter.default.publisher(for: RemoteControlService.patchesDidChange)) { _ in
-                    store.reload()
                 }
             }
             .navigationTitle(language.text("patch.unlock"))

@@ -75,23 +75,13 @@ final class LicenseManager: ObservableObject {
                     updateExpiration(result.expirationDate)
                     lastValidationAt = Date()
                 } else {
-                    if Self.isRevocationMessage(result.message) {
-                        revoke()
-                        message = result.message
-                    } else {
-                        isAuthorized = storedKey != nil
-                        message = nil
-                    }
+                    revoke()
+                    message = result.message ?? "Invalid or expired key."
                 }
             } catch let error as LicenseValidationError {
                 if case .definitiveInvalid(let invalidMessage) = error {
-                    if Self.isRevocationMessage(invalidMessage) {
-                        revoke()
-                        message = invalidMessage ?? error.localizedDescription
-                    } else {
-                        isAuthorized = storedKey != nil
-                        message = nil
-                    }
+                    revoke()
+                    message = invalidMessage ?? error.localizedDescription
                 } else {
                     let hasPreviouslyValidatedKey = storedKey != nil
                     isAuthorized = hasPreviouslyValidatedKey

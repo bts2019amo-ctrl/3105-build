@@ -59,6 +59,14 @@ struct ThreeOneOSFiveApp: App {
             .onChange(of: scenePhase) { phase in
                 guard phase == .active else { return }
                 appState.detectSupport()
+                licenseManager.refresh()
+            }
+            .task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 60_000_000_000)
+                    guard !Task.isCancelled else { return }
+                    licenseManager.refresh()
+                }
             }
             .onOpenURL { url in
                 patchDraftCoordinator.presentImport(url)
