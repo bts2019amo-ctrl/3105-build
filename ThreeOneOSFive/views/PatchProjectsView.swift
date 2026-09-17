@@ -25,22 +25,22 @@ struct PatchProjectsView: View {
     @State private var wallpaperImportFeedback: WallpaperImportFeedback?
     @State private var wallpaperPendingDeletion: WallpaperStagedPackage?
     @State private var isImportingWallpapers = false
-    @State private var pendingRemoteFilename: String?
-    @State private var remoteDestinationID: UUID?
+    @State private var pendingRemoteApplyFilename: String?
     @State private var showSimulatedWallpaperDetail = false
     @State private var simulatedWallpaperDetailGate = OneShotPresentationGate()
     let onOpenSettings: () -> Void
     let onOpenLogs: () -> Void
 
     private var remotePatches: [RemotePatchInfo] {
-        let installed = Set(store.items.map { $0.packageURL.lastPathComponent })
-        return remoteControl.patchCatalog.filter { !installed.contains($0.filename) }
+        remoteControl.patchCatalog
     }
 
     private var filteredItems: [PatchLibraryItem] {
+        let remoteFilenames = Set(remoteControl.patchCatalog.map(\.filename))
+        let visibleItems = store.items.filter { !remoteFilenames.contains($0.packageURL.lastPathComponent) }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return store.items }
-        return store.items.filter { item in
+        guard !query.isEmpty else { return visibleItems }
+        return visibleItems.filter { item in
             if item.packageURL.lastPathComponent.localizedCaseInsensitiveContains(query) {
                 return true
             }
@@ -243,14 +243,11 @@ struct PatchProjectsView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: RemoteControlService.patchesDidChange)) { _ in
                 store.reload()
-                guard let filename = pendingRemoteFilename else { return }
+                guard let filename = pendingRemoteApplyFilename else { return }
                 if let item = store.items.first(where: { $0.packageURL.lastPathComponent == filename }) {
-                    pendingRemoteFilename = nil
-                    remoteDestinationID = item.id
+                    pendingRemoteApplyFilename = nil
+                    applyRemotePatch(item)
                 }
-            }
-            .navigationDestination(item: $remoteDestinationID) { projectID in
-                PatchProjectDetailView(store: store, projectID: projectID)
             }
             .navigationDestination(isPresented: $showSimulatedWallpaperDetail) {
                 if let package = wallpaperPackages.first {
@@ -273,21 +270,37 @@ struct PatchProjectsView: View {
     }
 
     private func remotePatchRow(_ patch: RemotePatchInfo) -> some View {
-        Button {
-            pendingRemoteFilename = patch.filename
-            remoteControl.setPatchActive(patch, active: true)
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(patch.name).font(.body.weight(.semibold))
-                    Text("\(patch.category) · \(patch.game)").font(.caption).foregroundStyle(.secondary)
+        Toggle(isOn: Binding(
+            get: { remoteControl.isPatchActive(patch) },
+            set: { enabled in
+                if enabled {
+                    pendingRemoteApplyFilename = patch.filename
                 }
-                Spacer()
-                Image(systemName: "arrow.down.circle")
-                    .foregroundStyle(.tint)
+                remoteControl.setPatchActive(patch, active: enabled)
+            }
+        )) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(patch.name).font(.body.weight(.semibold))
+                Text("\(patch.category) · \(patch.game)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
-        .buttonStyle(.plain)
+    }
+
+    private func applyRemotePatch(_ item: PatchLibraryItem) {
+        guard let baseProject = item.project else { return }
+        Task.detached(priority: .userInitiated) {
+            do {
+                let project = item.summary.schemaVersion >= 2 && item.canInspectContents
+                    ? try PatchProjectLibrary.synchronizeWorkspace(item: item)
+                    : baseProject
+                _ = try DevicePatchService.apply(project: project)
+                await MainActor.run { store.reload() }
+            } catch {
+                log("remote: native apply failed for \(item.packageURL.lastPathComponent): \(String(reflecting: error))")
+            }
+        }
     }
 
     private func wallpaperRow(_ package: WallpaperStagedPackage) -> some View {

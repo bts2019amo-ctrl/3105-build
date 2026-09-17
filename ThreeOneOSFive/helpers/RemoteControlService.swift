@@ -247,13 +247,8 @@ final class RemoteControlService: ObservableObject {
         let root = try? PatchProjectLibrary.packageRootURL()
         let url = root?.appendingPathComponent(patch.filename)
         if active {
-            let previouslyEnabled = enabled.filter { $0 != patch.filename }
             disabled.remove(patch.filename)
-            enabled = [patch.filename]
-            for filename in previouslyEnabled {
-                disabled.insert(filename)
-                deactivateInstalledPatch(filename, root: root)
-            }
+            enabled.insert(patch.filename)
         } else {
             disabled.insert(patch.filename)
             enabled.remove(patch.filename)
