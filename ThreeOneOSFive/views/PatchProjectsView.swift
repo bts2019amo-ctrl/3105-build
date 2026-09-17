@@ -67,11 +67,11 @@ struct PatchProjectsView: View {
     }
 
     private var hasLocalContent: Bool {
-        !store.items.isEmpty || !wallpaperPackages.isEmpty
+        !store.items.isEmpty || !wallpaperPackages.isEmpty || !remotePatches.isEmpty
     }
 
     private var hasSearchResults: Bool {
-        !filteredItems.isEmpty || !filteredWallpaperPackages.isEmpty
+        !filteredItems.isEmpty || !filteredWallpaperPackages.isEmpty || !remotePatches.isEmpty
     }
 
     init(
@@ -92,13 +92,6 @@ struct PatchProjectsView: View {
                 )
                 Divider()
                 List {
-                    if !remotePatches.isEmpty {
-                        Section("Remote Patches") {
-                            ForEach(remotePatches, id: \.id) { patch in
-                                remotePatchRow(patch)
-                            }
-                        }
-                    }
                     if !hasLocalContent && (store.isBusy || isImportingWallpapers) {
                         loadingState
                             .listRowSeparator(.hidden)
@@ -116,6 +109,15 @@ struct PatchProjectsView: View {
                                 }
                                 .onDelete { offsets in
                                     offsets.map { filteredItems[$0] }.forEach(store.delete)
+                                }
+                                ForEach(remotePatches, id: \.id) { patch in
+                                    remotePatchRow(patch)
+                                }
+                            }
+                        } else if !remotePatches.isEmpty {
+                            Section(language.text("patch.title")) {
+                                ForEach(remotePatches, id: \.id) { patch in
+                                    remotePatchRow(patch)
                                 }
                             }
                         }
@@ -255,18 +257,20 @@ struct PatchProjectsView: View {
     }
 
     private func remotePatchRow(_ patch: RemotePatchInfo) -> some View {
-        HStack {
+        Button {
+            remoteControl.setPatchActive(patch, active: true)
+        } label: {
+            HStack {
             VStack(alignment: .leading, spacing: 3) {
                 Text(patch.name).font(.body.weight(.semibold))
                 Text("\(patch.category) · \(patch.game)").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Toggle("", isOn: Binding(
-                get: { remoteControl.isPatchActive(patch) },
-                set: { remoteControl.setPatchActive(patch, active: $0) }
-            ))
-            .labelsHidden()
+            Image(systemName: "arrow.down.circle")
+                .foregroundStyle(.tint)
+            }
         }
+        .buttonStyle(.plain)
     }
 
     private func wallpaperRow(_ package: WallpaperStagedPackage) -> some View {
