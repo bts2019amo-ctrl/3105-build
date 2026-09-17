@@ -30,6 +30,7 @@ jobs:
       - name: Build unsigned app
         run: |
           set -o pipefail
+          mkdir -p build
           xcodebuild \
             -project ThreeOneOSFive.xcodeproj \
             -scheme 3105 \
