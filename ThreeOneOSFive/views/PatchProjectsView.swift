@@ -257,20 +257,30 @@ struct PatchProjectsView: View {
     }
 
     private func remotePatchRow(_ patch: RemotePatchInfo) -> some View {
-        Button {
-            remoteControl.setPatchActive(patch, active: true)
-        } label: {
+        VStack(alignment: .leading, spacing: 9) {
             HStack {
             VStack(alignment: .leading, spacing: 3) {
                 Text(patch.name).font(.body.weight(.semibold))
                 Text("\(patch.category) · \(patch.game)").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Image(systemName: "arrow.down.circle")
-                .foregroundStyle(.tint)
+            Image(systemName: remoteControl.isPatchActive(patch) ? "checkmark.circle.fill" : "shippingbox.fill")
+                .foregroundStyle(remoteControl.isPatchActive(patch) ? .green : .secondary)
             }
+            HStack(spacing: 8) {
+                Button("APLICAR") {
+                    remoteControl.setPatchActive(patch, active: true)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.accentColor)
+                Button("RESTAURAR ORIGINAL") {
+                    remoteControl.setPatchActive(patch, active: false)
+                }
+                .buttonStyle(.bordered)
+            }
+            .font(.caption2.weight(.bold))
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 5)
     }
 
     private func wallpaperRow(_ package: WallpaperStagedPackage) -> some View {
