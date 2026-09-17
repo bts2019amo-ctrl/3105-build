@@ -215,16 +215,6 @@ final class RemoteControlService: ObservableObject {
                 }
                 if !matches {
                     try downloadAndInstall(patch, existingURL: exists ? url : nil, destinationURL: url)
-                } else if let item = PatchProjectLibrary.load().first(where: {
-                    $0.packageURL.lastPathComponent == patch.filename
-                }), let project = item.project,
-                          let receipt = DevicePatchService.latestReceipt(projectID: project.id) {
-                    try? DevicePatchService.restore(receipt: receipt, allowChangedTargets: true)
-                    _ = try DevicePatchService.apply(project: project)
-                } else if let item = PatchProjectLibrary.load().first(where: {
-                    $0.packageURL.lastPathComponent == patch.filename
-                }), let project = item.project {
-                    _ = try DevicePatchService.apply(project: project)
                 }
                 managed.insert(patch.filename)
             } catch {
@@ -305,18 +295,11 @@ final class RemoteControlService: ObservableObject {
         guard try SHA256.hex(of: data) == patch.sha256.lowercased() else { throw PatchPackageError.invalidProject }
         let summary = try PatchPackageCodec.inspect(data)
         guard !summary.isPasswordProtected else { throw PatchPackageError.invalidProject }
-        let decoded = try PatchPackageCodec.decode(data, password: nil)
         _ = try PatchProjectLibrary.save(
             data: data,
             projectName: patch.filename,
             existingURL: existingURL ?? destinationURL
         )
-        if summary.schemaVersion >= 2 {
-            _ = try PatchWorkspaceService.replaceWorkspace(with: decoded.project)
-        } else {
-            try? PatchWorkspaceService.deleteWorkspace(projectID: decoded.project.id)
-        }
-        _ = try DevicePatchService.apply(project: decoded.project)
     }
 
     private func resolvedURL(_ value: String) -> String {

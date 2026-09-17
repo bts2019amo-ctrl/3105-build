@@ -30,7 +30,10 @@ struct PatchProjectsView: View {
     let onOpenSettings: () -> Void
     let onOpenLogs: () -> Void
 
-    private var remotePatches: [RemotePatchInfo] { remoteControl.patchCatalog }
+    private var remotePatches: [RemotePatchInfo] {
+        let installed = Set(store.items.map { $0.packageURL.lastPathComponent })
+        return remoteControl.patchCatalog.filter { !installed.contains($0.filename) }
+    }
 
     private var filteredItems: [PatchLibraryItem] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -257,30 +260,20 @@ struct PatchProjectsView: View {
     }
 
     private func remotePatchRow(_ patch: RemotePatchInfo) -> some View {
-        VStack(alignment: .leading, spacing: 9) {
+        Button {
+            remoteControl.setPatchActive(patch, active: true)
+        } label: {
             HStack {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(patch.name).font(.body.weight(.semibold))
-                Text("\(patch.category) · \(patch.game)").font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Image(systemName: remoteControl.isPatchActive(patch) ? "checkmark.circle.fill" : "shippingbox.fill")
-                .foregroundStyle(remoteControl.isPatchActive(patch) ? .green : .secondary)
-            }
-            HStack(spacing: 8) {
-                Button("APLICAR") {
-                    remoteControl.setPatchActive(patch, active: true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(patch.name).font(.body.weight(.semibold))
+                    Text("\(patch.category) · \(patch.game)").font(.caption).foregroundStyle(.secondary)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.accentColor)
-                Button("RESTAURAR ORIGINAL") {
-                    remoteControl.setPatchActive(patch, active: false)
-                }
-                .buttonStyle(.bordered)
+                Spacer()
+                Image(systemName: "arrow.down.circle")
+                    .foregroundStyle(.tint)
             }
-            .font(.caption2.weight(.bold))
         }
-        .padding(.vertical, 5)
+        .buttonStyle(.plain)
     }
 
     private func wallpaperRow(_ package: WallpaperStagedPackage) -> some View {
@@ -565,6 +558,9 @@ struct PatchUnlockView: View {
                     } else {
                         Text(language.text("patch.password_once_message"))
                     }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: RemoteControlService.patchesDidChange)) { _ in
+                    store.reload()
                 }
             }
             .navigationTitle(language.text("patch.unlock"))
