@@ -612,6 +612,8 @@ private struct PatchProjectDetailView: View {
     @State private var showResetConfirmation = false
     @State private var restoreChangedPaths: [String] = []
     @State private var isWorking = false
+    @State private var applyToggle = false
+    @State private var restoreToggle = false
     @State private var actionAlert: PatchStoreAlert?
     @State private var shareRequest: PatchShareRequest?
 
@@ -746,25 +748,38 @@ private struct PatchProjectDetailView: View {
                 }
 
                 Section {
-                    Button {
-                        showApplyConfirmation = true
-                    } label: {
+                    Toggle(isOn: Binding(
+                        get: { applyToggle },
+                        set: { enabled in
+                            applyToggle = enabled
+                            guard !isWorking else { return }
+                            if enabled {
+                                apply()
+                            } else if receipt != nil {
+                                prepareRestore()
+                            }
+                        }
+                    )) {
                         actionLabel("patch.apply", systemImage: "checkmark.shield.fill")
                     }
-                    .disabled(isWorking || receipt != nil)
+                    .disabled(isWorking)
 
                     if receipt != nil {
+                        Toggle(isOn: $restoreToggle) {
+                            actionLabel("patch.restore", systemImage: "arrow.uturn.backward.circle")
+                        }
+                        .disabled(isWorking)
+                        .onChange(of: restoreToggle) { enabled in
+                            guard enabled, !isWorking else { return }
+                            applyToggle = false
+                            restoreToggle = false
+                            prepareRestore()
+                        }
+
                         Button {
                             showResetConfirmation = true
                         } label: {
                             actionLabel("patch.reset", systemImage: "arrow.counterclockwise.circle")
-                        }
-                        .disabled(isWorking)
-
-                        Button(role: .destructive) {
-                            showRestoreConfirmation = true
-                        } label: {
-                            actionLabel("patch.restore", systemImage: "arrow.uturn.backward.circle")
                         }
                         .disabled(isWorking)
                     }
@@ -777,6 +792,9 @@ private struct PatchProjectDetailView: View {
                     Text(language.text("patch.apply_footer"))
                 }
             }
+        }
+        .onAppear {
+            applyToggle = receipt != nil
         }
         .listStyle(.insetGrouped)
         .navigationTitle(item?.project?.name ?? language.text("patch.title"))
