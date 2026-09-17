@@ -28,8 +28,9 @@ jobs:
           xcodebuild -showsdks
 
       - name: Build unsigned app
+        shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           mkdir -p build
           xcodebuild \
             -project ThreeOneOSFive.xcodeproj \
@@ -41,13 +42,20 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            build | tee build/xcodebuild.log
+            build 2>&1 | tee build/xcodebuild.log
 
       - name: Package unsigned app
+        shell: bash
         run: |
-          APP_PATH="$(find build/DerivedData/Build/Products -type d -name '3105.app' -print -quit)"
-          test -n "$APP_PATH"
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" build/3105-unsigned.app.zip
+          set -euo pipefail
+          app_path="$(find build/DerivedData/Build/Products -type d -name '3105.app' -print -quit)"
+          test -n "$app_path"
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" build/3105-unsigned.app.zip
+          rm -rf build/Payload
+          mkdir -p build/Payload
+          cp -R "$app_path" build/Payload/
+          (cd build && /usr/bin/zip -qry 3105-unsigned.ipa Payload)
+          ls -lh build/3105-unsigned.app.zip build/3105-unsigned.ipa
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -55,5 +63,7 @@ jobs:
           name: 3105-ios-build
           path: |
             build/3105-unsigned.app.zip
+            build/3105-unsigned.ipa
             build/xcodebuild.log
           if-no-files-found: error
+          retention-days: 14
