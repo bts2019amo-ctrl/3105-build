@@ -644,7 +644,7 @@ struct ActivationView: View {
                                 lineWidth: 0.9
                             )
                     }
-                    .shadow(color: AppTheme.glassShadow, radius: 24, y: 12)
+                    .shadow(color: Color.black.opacity(0.16), radius: 24, y: 12)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 30)
                 }
