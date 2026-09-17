@@ -9,6 +9,7 @@ struct ThreeOneOSFiveApp: App {
     @StateObject private var patchStore = PatchProjectStore()
     @StateObject private var repositoryStore = PackageRepositoryStore()
     @StateObject private var remoteControl = RemoteControlService()
+    @StateObject private var licenseManager = LicenseManager()
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
     @State private var showAttribution = false
     @Environment(\.scenePhase) private var scenePhase
@@ -24,22 +25,36 @@ struct ThreeOneOSFiveApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(appState)
-                .environmentObject(patchDraftCoordinator)
-                .environmentObject(fileOperationCoordinator)
-                .environmentObject(patchStore)
-                .environmentObject(repositoryStore)
-                .environmentObject(remoteControl)
-                .environment(\.appLanguage, language)
-                .environment(\.locale, language.locale)
+            Group {
+                if licenseManager.isLoading {
+                    ActivationLoadingView()
+                } else if !licenseManager.isAuthorized {
+                    ActivationView(manager: licenseManager) { key in
+                        await licenseManager.activate(key: key)
+                    }
+                } else {
+                    ContentView()
+                        .environmentObject(appState)
+                        .environmentObject(patchDraftCoordinator)
+                        .environmentObject(fileOperationCoordinator)
+                        .environmentObject(patchStore)
+                        .environmentObject(repositoryStore)
+                        .environmentObject(remoteControl)
+                }
+            }
+            .environment(\.appLanguage, language)
+            .environment(\.locale, language.locale)
             .displayIdentityAttribution(isPresented: $showAttribution, enabled: true)
             .sheet(isPresented: $showAttribution) {
                 DisplayAttributionSheet()
             }
             .onAppear {
                 appState.detectSupport()
-                remoteControl.setAuthorized(true)
+                licenseManager.refresh()
+                remoteControl.setAuthorized(licenseManager.isAuthorized)
+            }
+            .onChange(of: licenseManager.isAuthorized) { authorized in
+                remoteControl.setAuthorized(authorized)
             }
             .onChange(of: scenePhase) { phase in
                 guard phase == .active else { return }
