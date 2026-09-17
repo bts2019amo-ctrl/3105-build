@@ -17,6 +17,7 @@ struct PatchProjectsView: View {
     @Environment(\.appLanguage) private var language
     @EnvironmentObject private var draftCoordinator: PatchDraftCoordinator
     @EnvironmentObject private var store: PatchProjectStore
+    @EnvironmentObject private var remoteControl: RemoteControlService
     @State private var showImporter = false
     @State private var showWallpaperImporter = false
     @State private var searchText = ""
@@ -28,6 +29,8 @@ struct PatchProjectsView: View {
     @State private var simulatedWallpaperDetailGate = OneShotPresentationGate()
     let onOpenSettings: () -> Void
     let onOpenLogs: () -> Void
+
+    private var remotePatches: [RemotePatchInfo] { remoteControl.patchCatalog }
 
     private var filteredItems: [PatchLibraryItem] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -89,6 +92,13 @@ struct PatchProjectsView: View {
                 )
                 Divider()
                 List {
+                    if !remotePatches.isEmpty {
+                        Section("Remote Patches") {
+                            ForEach(remotePatches, id: \.id) { patch in
+                                remotePatchRow(patch)
+                            }
+                        }
+                    }
                     if !hasLocalContent && (store.isBusy || isImportingWallpapers) {
                         loadingState
                             .listRowSeparator(.hidden)
@@ -242,6 +252,21 @@ struct PatchProjectsView: View {
         guard let request = draftCoordinator.importRequest else { return }
         draftCoordinator.clearImport()
         store.importPackage(from: request.source)
+    }
+
+    private func remotePatchRow(_ patch: RemotePatchInfo) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(patch.name).font(.body.weight(.semibold))
+                Text("\(patch.category) · \(patch.game)").font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Toggle("", isOn: Binding(
+                get: { remoteControl.isPatchActive(patch) },
+                set: { remoteControl.setPatchActive(patch, active: $0) }
+            ))
+            .labelsHidden()
+        }
     }
 
     private func wallpaperRow(_ package: WallpaperStagedPackage) -> some View {

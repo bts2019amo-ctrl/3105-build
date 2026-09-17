@@ -7,6 +7,7 @@ struct ContentView: View {
     @EnvironmentObject private var patchDraftCoordinator: PatchDraftCoordinator
     @EnvironmentObject private var patchStore: PatchProjectStore
     @EnvironmentObject private var repositoryStore: PackageRepositoryStore
+    @EnvironmentObject private var remoteControl: RemoteControlService
     @AppStorage(FeatureVisibility.developerModeStorageKey)
     private var developerModeEnabled = false
     @State private var tabNavigation: AppTabNavigationState

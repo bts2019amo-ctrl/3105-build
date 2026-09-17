@@ -8,6 +8,7 @@ struct ThreeOneOSFiveApp: App {
     @StateObject private var fileOperationCoordinator = FileOperationCoordinator()
     @StateObject private var patchStore = PatchProjectStore()
     @StateObject private var repositoryStore = PackageRepositoryStore()
+    @StateObject private var remoteControl = RemoteControlService()
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
     @State private var showAttribution = false
     @Environment(\.scenePhase) private var scenePhase
@@ -29,6 +30,7 @@ struct ThreeOneOSFiveApp: App {
                 .environmentObject(fileOperationCoordinator)
                 .environmentObject(patchStore)
                 .environmentObject(repositoryStore)
+                .environmentObject(remoteControl)
                 .environment(\.appLanguage, language)
                 .environment(\.locale, language.locale)
             .displayIdentityAttribution(isPresented: $showAttribution, enabled: true)
@@ -37,6 +39,7 @@ struct ThreeOneOSFiveApp: App {
             }
             .onAppear {
                 appState.detectSupport()
+                remoteControl.setAuthorized(true)
             }
             .onChange(of: scenePhase) { phase in
                 guard phase == .active else { return }
