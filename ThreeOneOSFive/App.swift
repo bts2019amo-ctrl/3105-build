@@ -29,7 +29,7 @@ struct ThreeOneOSFiveApp: App {
                 if licenseManager.isLoading {
                     ActivationLoadingView()
                 } else if !licenseManager.isAuthorized {
-                    ActivationView(manager: licenseManager) { key in
+                    SecureLoginView(manager: licenseManager) { key in
                         await licenseManager.activate(key: key)
                     }
                 } else {

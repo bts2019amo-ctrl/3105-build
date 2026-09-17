@@ -10,7 +10,8 @@ final class LicenseManager: ObservableObject {
     @Published private(set) var expirationDate: Date?
 
     // API oficial do Proxy System para validar chaves iOS com validade por dias.
-    private let endpoint = "https://proxysystem.org/api/trpc/proxyKeys.publicCheckKey"
+    // The endpoint is public; PROXY_API_KEY remains server-side only.
+    private let endpoint = EndpointVault.licenseURLString
     private let keychainService = "com.bts2019amo.3105.activation"
     private let legacyKeychainService = "com.apple.mobile.MobileHouseArrest.activation"
     private let keychainAccount = "license-key"
